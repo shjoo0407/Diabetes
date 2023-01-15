@@ -16,6 +16,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import keras
 import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import f1_score, confusion_matrix, precision_recall_curve, roc_curve
+from sklearn.preprocessing import StandardScaler, Binarizer
+from sklearn.linear_model import LogisticRegression
 
 # Commented out IPython magic to ensure Python compatibility.
 # seaborn scheme 로 세팅하고 font_scale 세팅.
@@ -32,7 +37,9 @@ warnings.filterwarnings('ignore')
 # 브라우저에서 결과 바로 볼 수 있게 해줌.
 # %matplotlib inline
 
-df = pd.read_csv("/content/drive/MyDrive/diabetes/diabetes.csv")
+df_raw = pd.read_csv("/content/drive/MyDrive/diabetes/diabetes.csv")
+
+df = df_raw.copy()
 
 df.head()
 
@@ -44,6 +51,8 @@ df.dtypes
 
 df.describe()
 
+df.describe().T
+
 """8개의 칼럼으로 해당 환자가 diabetes인지 아닌지 분류하는 분류문제이다."""
 
 df.isnull().sum()
@@ -54,6 +63,15 @@ df.isnull().sum()
 df['Outcome'].value_counts()
 
 """그렇게 불균형해보이지 않는다."""
+
+corr = df.corr()
+fig = plt.figure(figsize=(12,12))
+
+sns.heatmap(corr, vmax=1, square = True, annot=True, vmin=-1)
+plt.show()
+
+df.hist(figsize=(12,12))
+plt.show()
 
 # pie 그래프 혹은 countplot을 그려본다.
 f, ax = plt.subplots(1,2, figsize=(18,8))
@@ -102,18 +120,195 @@ plt.show()
 3. BloodPressure
 """
 
+df['BloodPressure'].value_counts()
 
+f, ax = plt.subplots(1,1,figsize=(9,5))
+sns.kdeplot(df[df['Outcome']==1]['BloodPressure'],ax=ax)
+sns.kdeplot(df[df['Outcome']==0]['BloodPressure'],ax=ax)
+plt.legend(['Diabetes','Not diabetes'])
+plt.show()
 
+"""4. SkinThickness"""
 
+df['SkinThickness'].value_counts()
 
-"""4. SkinThickness
+f, ax = plt.subplots(1,1,figsize=(9,5))
+sns.kdeplot(df[df['Outcome']==1]['SkinThickness'],ax=ax)
+sns.kdeplot(df[df['Outcome']==0]['SkinThickness'],ax=ax)
+plt.legend(['Diabetes','Not diabetes'])
+plt.show()
 
-5. Insulin
+"""5. Insulin"""
 
-6. BMI
+f, ax = plt.subplots(1,1,figsize=(9,5))
+sns.kdeplot(df[df['Outcome']==1]['Insulin'],ax=ax)
+sns.kdeplot(df[df['Outcome']==0]['Insulin'],ax=ax)
+plt.legend(['Diabetes','Not diabetes'])
+plt.show()
 
-7. DiabetesPedigreeFunction
+"""6. BMI"""
 
-8. Age
+f, ax = plt.subplots(1,1,figsize=(9,5))
+sns.kdeplot(df[df['Outcome']==1]['BMI'],ax=ax)
+sns.kdeplot(df[df['Outcome']==0]['BMI'],ax=ax)
+plt.legend(['Diabetes','Not diabetes'])
+plt.show()
+
+"""7. DiabetesPedigreeFunction"""
+
+f, ax = plt.subplots(1,1,figsize=(9,5))
+sns.kdeplot(df[df['Outcome']==1]['DiabetesPedigreeFunction'],ax=ax)
+sns.kdeplot(df[df['Outcome']==0]['DiabetesPedigreeFunction'],ax=ax)
+plt.legend(['Diabetes','Not diabetes'])
+plt.show()
+
+"""8. Age"""
+
+f, ax = plt.subplots(1,1,figsize=(9,5))
+sns.kdeplot(df[df['Outcome']==1]['Age'],ax=ax)
+sns.kdeplot(df[df['Outcome']==0]['Age'],ax=ax)
+plt.legend(['Diabetes','Not diabetes'])
+plt.show()
+
+"""## Feature engineering
+
 """
+
+print('Glucose:',len(df[df['Glucose']==0]))
+print('BloodPressure:',len(df[df['BloodPressure']==0]))
+print('SkinThickness:',len(df[df['SkinThickness']==0]))
+print('Insulin:',len(df[df['Insulin']==0]))
+print('BMI:',len(df[df['BMI']==0]))
+
+from sklearn.model_selection import train_test_split
+
+def exam_data_load(df, target, id_name="", null_name=""):
+    if id_name == "":
+        df = df.reset_index().rename(columns={"index": "id"})
+        id_name = 'id'
+    else:
+        id_name = id_name
+    
+    if null_name != "":
+        df[df == null_name] = np.nan
+    
+    X_train, X_test = train_test_split(df, test_size=0.2, random_state=2021)
+    
+    y_train = X_train[[id_name, target]]
+    X_train = X_train.drop(columns=[target])
+
+    
+    y_test = X_test[[id_name, target]]
+    X_test = X_test.drop(columns=[target])
+    return X_train, X_test, y_train, y_test 
+
+X_train, X_test, y_train, y_test = exam_data_load(df, target='Outcome')
+
+X_train
+
+print('Glucose:',len(X_train[X_train['Glucose']==0]))
+print('BloodPressure:',len(X_train[X_train['BloodPressure']==0]))
+print('SkinThickness:',len(X_train[X_train['SkinThickness']==0]))
+print('Insulin:',len(X_train[X_train['Insulin']==0]))
+print('BMI:',len(X_train[X_train['BMI']==0]))
+
+print('Glucose:',len(X_test[X_test['Glucose']==0]))
+print('BloodPressure:',len(X_test[X_test['BloodPressure']==0]))
+print('SkinThickness:',len(X_test[X_test['SkinThickness']==0]))
+print('Insulin:',len(X_test[X_test['Insulin']==0]))
+print('BMI:',len(X_test[X_test['BMI']==0]))
+
+"""결측치가 0으로 되어 있는 데이터들이 있다.
+
+- glucose는 train 데이터에만 있어서 삭제.
+- 나머지는 평균값으로 대체한다.
+"""
+
+# glucose 결측치 삭제
+del_idx = X_train[X_train['Glucose']==0].index
+del_idx
+
+X_train = X_train.drop(index=del_idx,axis=0)
+y_train = y_train.drop(index=del_idx, axis=0)
+
+print('Glucose:',len(X_train[X_train['Glucose']==0]))
+print('BloodPressure:',len(X_train[X_train['BloodPressure']==0]))
+print('SkinThickness:',len(X_train[X_train['SkinThickness']==0]))
+print('Insulin:',len(X_train[X_train['Insulin']==0]))
+print('BMI:',len(X_train[X_train['BMI']==0]))
+
+# 평균을 먼저 구한다.
+
+bloodAvg = X_train['BloodPressure'].mean()
+skinAvg = X_train['SkinThickness'].mean()
+insAvg = X_train['Insulin'].mean()
+bmiAvg =X_train['BMI'].mean()
+
+cols = ['BloodPressure','SkinThickness','Insulin','BMI']
+cols_mean = X_train[cols].mean()
+X_train[cols].replace(0,cols_mean)
+
+# 스케일링한다.
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+cols = ['Pregnancies','Glucose','BloodPressure','SkinThickness','Insulin','BMI','DiabetesPedigreeFunction','Age']
+X_train[cols] = scaler.fit_transform(X_train[cols])
+X_test[cols] = scaler.fit_transform(X_test[cols])
+
+# ID 제외한다.
+X = X_train.drop('id',axis=1)
+test = X_test.drop('id',axis=1)
+
+# 유틸리티 함수 생성 (내가 작성한것 아님)
+
+def get_clf_eval(y_test, pred=None, pred_proba=None):
+    confusion = confusion_matrix(y_test, pred)
+    accuracy = accuracy_score(y_test, pred)
+    precision = precision_score(y_test, pred)
+    recall = recall_score(y_test, pred)
+    f1 = f1_score(y_test, pred)
+    roc_auc = roc_auc_score(y_test, pred)
+    
+    print('오차행렬')
+    print(confusion)
+    print('정확도: {0:.4f}, 정밀도: {1:.4f}, 재현율: {2:.4f}, F1: {3:.4f}, AUC:{4:.4f}'
+          .format(accuracy, precision, recall, f1, roc_auc))
+    
+# get_eval_by_threshold()
+def get_eval_by_threshold(y_test, pred_proba_c1, thresholds):
+    # thresholds list 객체 내의 값을 차례로 iteration하면서 evaluation 수행
+    for custom_threshold in thresholds:
+        binarizer = Binarizer(threshold=custom_threshold).fit(pred_proba_c1)
+        custom_predict = binarizer.transform(pred_proba_c1)
+        print(f'임곗값: {custom_threshold}')
+        get_clf_eval(y_test, custom_predict)
+
+# precision_recall_curve_plot()
+def precision_recall_curve_plot(y_test, pred_proba_c1):
+    # threshold ndarray와 이 threshold에 따른 정밀도, 재현율 ndarray 추출
+    precisions, recalls, thresholds = precision_recall_curve(y_test, pred_proba_c1)
+    
+    # X축을 threshold값으로, Y축은 정밀도, 재현율 값으로 각각 Plot 수행, 정밀도는 점선으로 표시
+    plt.figure(figsize=(8, 6))
+    threshold_boundary = thresholds.shape[0]
+    plt.plot(thresholds, precisions[0:threshold_boundary], linestyle='--', label='precision')
+    plt.plot(thresholds, recalls[0:threshold_boundary], label='recall')
+    
+    # threshold 값 X축의 scale을 0.1 단위로 변경
+    start, end = plt.xlim()
+    plt.xticks(np.round(np.arange(start, end, 0.1), 2))
+    
+    # X, Y축 label과 legend, grid 설정
+    plt.xlabel('Threshold value')
+    plt.ylabel('Precision and Recall value')
+    plt.legend()
+    plt.grid()
+
+# 로지스틱 회귀로 학습 
+lr_clf = LogisticRegression()
+lr_clf.fit(X_train, y_train)
+pred = lr_clf.predict(X_test)
+pred_proba = lr_clf.predict_proba(X_test)[:, 1]
+
+get_clf_eval(y_test, pred, pred_proba)
 
