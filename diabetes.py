@@ -255,9 +255,13 @@ cols = ['Pregnancies','Glucose','BloodPressure','SkinThickness','Insulin','BMI',
 X_train[cols] = scaler.fit_transform(X_train[cols])
 X_test[cols] = scaler.fit_transform(X_test[cols])
 
+y_test.head()
+
 # ID 제외한다.
-X = X_train.drop('id',axis=1)
-test = X_test.drop('id',axis=1)
+X_train = X_train.drop('id',axis=1)
+X_test = X_test.drop('id',axis=1)
+y_train = y_train.drop('id',axis=1)
+y_test = y_test.drop('id',axis=1)
 
 # 유틸리티 함수 생성 (내가 작성한것 아님)
 
@@ -311,4 +315,19 @@ pred = lr_clf.predict(X_test)
 pred_proba = lr_clf.predict_proba(X_test)[:, 1]
 
 get_clf_eval(y_test, pred, pred_proba)
+
+pred_proba_c1 = lr_clf.predict_proba(X_test)[:, 1]
+precision_recall_curve_plot(y_test, pred_proba_c1)
+
+# 임계값을 변화시키면서 확인해보자.
+thresholds = [0.3, 0.33, 0.36, 0.39, 0.42, 0.45, 0.48, 0.50]
+pred_proba = lr_clf.predict_proba(X_test)
+get_eval_by_threshold(y_test, pred_proba[:, 1].reshape(-1, 1), thresholds)
+
+binarizer = Binarizer(threshold=0.48)
+
+# 위에서 구한 lr_clf의 predict_proba() 예측 확률 array에서 1에 해당하는 칼럼값을 Binarizer 변환
+pred_th_048 = binarizer.fit_transform(pred_proba[:, 1].reshape(-1, 1))
+
+get_clf_eval(y_test, pred_th_048, pred_proba[:, 1])
 
