@@ -9,6 +9,16 @@
 - 데이터가 어떻게 구성되어 있는 지 확인한다.
 - null date를 확인하고 수정한다.
 
+1. Pregnancies : 임신 횟수
+2. Glucose : 포도당 부하 검사 수치
+3. BloodPressure : 혈압
+4. SkinThinkness : 팔 삼두근 뒤쪽의 피하지방 측정값
+5. Insulin : 혈청 인슐린
+6. BMI : 체질량 지수
+7. DiabetesPedigreeFunction : 당뇨 내력 가중치 값
+8. Age : 나이
+9. Outcome : 클래스 결정 값
+
 ### 2. EDA
 - 데이터가 어떤식으로 분포되어 있는 지 적절한 시각화를 통해서 분석한다.
 
